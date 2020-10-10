@@ -11,7 +11,9 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  *
@@ -20,10 +22,12 @@ import java.util.List;
 public class GerenciadorDeClientes extends Thread {
 
     private Socket cliente;
-    private static final List<Socket> clientes = new ArrayList<Socket>();
+    private static final Map<String, GerenciadorDeClientes> clientes = new HashMap<String, GerenciadorDeClientes>();
+    protected String nomeCliente;
+    protected BufferedReader leitor;
+    protected PrintWriter escritor;
 
     public GerenciadorDeClientes(Socket cliente) {
-        clientes.add(cliente);
         this.cliente = cliente;
         start();
     }
@@ -34,35 +38,64 @@ public class GerenciadorDeClientes extends Thread {
     @Override
     public void run() {
         try {
-            BufferedReader leitor = new BufferedReader(new InputStreamReader(cliente.getInputStream()));
-            PrintWriter escritor = new PrintWriter(cliente.getOutputStream(), true);
+            leitor = new BufferedReader(new InputStreamReader(cliente.getInputStream()));
+            escritor = new PrintWriter(cliente.getOutputStream(), true);
 
-            escritor.println("Bem vindo");
+            getEscritor().println("Digite seu nome..");
+            String msg = leitor.readLine();
+            this.nomeCliente = msg;
+            getEscritor().println("Bem vindo " + this.getNomeCliente());
 
-            String msg;
+            clientes.put(this.getNomeCliente(), this);
+
             while ((msg = leitor.readLine()) != null) {
 
-                if (msg.equals("close")) {
-                    escritor.println("conexao fechada \n");
+                if (msg.equals("::close")) {
+                    getEscritor().println("conexao fechada \n");
                     this.cliente.close();
 
-                } else if (msg.equals("close-server")) {
+                } else if (msg.equals("::close-server")) {
 
-                    escritor.println("voce fechou a conexao com o servidor \n");
+                    getEscritor().println(this.getNomeCliente() + ", fechou a conexao com o servidor \n");
 
-                    for (Socket cliente : clientes) {
-                        cliente.close();
+                    ServidorSocket.server.close();
+                } else if (msg.toLowerCase().startsWith("::msg")) {
+                    String nomeDestinatario = msg.substring(5, msg.length());
+                    System.out.println("enviando para: " + nomeDestinatario);
+
+                    GerenciadorDeClientes destinatario = clientes.get(nomeDestinatario);
+
+                    if (destinatario == null) {
+                        getEscritor().println("o cliente informado nao existe");
+                    } else {
+                        escritor.println("digite uma mensagem para " + destinatario.getNomeCliente());
+                        destinatario.getEscritor().println(this.getNomeCliente() + " disse: " + leitor.readLine());
+                        escritor.println("mensagem enviada..");
                     }
-                  ServidorSocket.server.close();
+
+                } else {
+                    getEscritor().println(this.getNomeCliente() + ", enivou: " + msg);
                 }
-                    else {
-                        escritor.println("voce disse: " + msg);
-                    }
 
             }
 
         } catch (IOException e) {
-            System.err.println("o cliente "+ cliente+ " teve problema na conexao" + e.getMessage());
+            System.err.println("o cliente " + cliente + " teve problema na conexao" + e.getMessage());
         }
     }
+
+    /**
+     * @return the escritor
+     */
+    public PrintWriter getEscritor() {
+        return escritor;
+    }
+
+    /**
+     * @return the nomeCliente
+     */
+    public String getNomeCliente() {
+        return nomeCliente;
+    }
+
 }

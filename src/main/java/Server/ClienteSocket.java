@@ -21,20 +21,21 @@ public class ClienteSocket {
     public static void main(String[] args) {
         try {
             System.out.println("Conectando ao servidor...");
-            
+
             final Socket s = new Socket("127.0.0.1", 9999);
             System.out.println("Conectado");
-                    
+
+            //lendo mensagem do servidor
             new Thread() {
-                
+
                 @Override
                 public void run() {
-                    
+
                     String msg = null;
                     try {
                         BufferedReader leitor = new BufferedReader(new InputStreamReader(s.getInputStream()));
                         while ((msg = leitor.readLine()) != null) {
-                            
+
                             System.out.println("o servidor: " + msg);
                         }
 
@@ -47,17 +48,20 @@ public class ClienteSocket {
 
             // escrenvendo para o servidor
             PrintWriter escritor = new PrintWriter(s.getOutputStream(), true);
-           System.out.println("digite uma mensagem: ");
+            BufferedReader leitorTerminal = new BufferedReader(new InputStreamReader(System.in));
+            
+            System.out.println("digite uma mensagem: ");
+            
             while (true) {
-                Scanner leitor = new Scanner(System.in);
-                String msg = leitor.nextLine();
-                if (msg.equals("sair")) {
+                String msgTerminal = leitorTerminal.readLine();
+                
+                if (msgTerminal.equals("sair")) {
                     escritor.println("close");
-                    leitor.close();
+                    leitorTerminal.close();
                     System.exit(0);
-              
+
                 }
-                escritor.println(msg);
+                escritor.println(msgTerminal);
             }
 
         } catch (IOException e) {
